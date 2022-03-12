@@ -17,6 +17,7 @@ public:
 	int getReadyQueueP();
 	void moveToReadyQueue();
 	int getArrivaltime();
+	void setArrivalTime(int y);
 	void readyQueuePop();
 
 
@@ -86,22 +87,37 @@ void Process::moveToReadyQueue()
 		if (isCPUburst)
 		{
 			readyQueue.push(cpuBurst.front());
+			cpuBurst.pop();
 			isCPUburst = false;
 			
 		}
 		else
 		{
-			arrivalTime = arrivalTime + IO.front();
-			IO.pop();
+			if (!IO.empty())
+			{
+				arrivalTime = arrivalTime + IO.front();
+				IO.pop();
+				isCPUburst = true;
+			}
+			
 		}
 		
-		cout<<readyQueue.front()<< "\n";
+		if (!readyQueue.empty())
+		{
+			cout << readyQueue.front() << "\n";
+		}
+		
 	}
 }
 
 int Process::getArrivaltime()
 {
 	return arrivalTime;
+}
+
+void Process::setArrivalTime(int y)
+{
+	arrivalTime = y;
 }
 
 void Process::readyQueuePop()
@@ -146,29 +162,53 @@ void SJFsched::cpu()
 {
 	int shortJob = 999999999;
 	int processNumber = -1;
-	for (size_t i = 0; i < size; i++)
+	//select short Job in  the ready queue of process
+	for (size_t i = 0; i < 5; i++)
 	{
-		int currentproccessJob =p[i].getReadyQueueP();
-		if (shortJob>currentproccessJob && actualTime >= p[i].getArrivaltime())
+
+		////////////////////////
+
+		for (size_t i = 0; i < size; i++)
 		{
-			shortJob = currentproccessJob;
-			processNumber = i;
+			if (p[i].getReadyQueueP() != 0)
+			{
+				int currentproccessJob = p[i].getReadyQueueP();
+				if (shortJob > currentproccessJob && actualTime >= p[i].getArrivaltime())
+				{
+					shortJob = currentproccessJob;
+					processNumber = i;
+				}
+			}
+
 		}
+
+		if (processNumber != -1)
+		{
+			p[processNumber].setArrivalTime(p[processNumber].getArrivaltime() + p[processNumber].getReadyQueueP());
+			actualTime = actualTime  +p[processNumber].getArrivaltime();
+			cout << "====================\n";
+			cout << "Process Number: " << processNumber + 1 <<endl<< "\t Cpu: " << shortJob << endl;
+			cout << "Actual Time: " << actualTime << endl;
+			cout << "====================\n";
+			
+			//cout << "now arrival time will be " << p[processNumber].getArrivaltime() << endl;
+			p[processNumber].readyQueuePop();
+
+			p[processNumber].moveToReadyQueue();
+
+			shortJob = 999999999;
+
+		}
+
+
+
+
+
+		//////////////////////////
+
 	}
 
-	if (processNumber!=-1)
-	{
-		actualTime = +p[processNumber].getReadyQueueP();
-		cout << "====================\n";
-		cout << "Process Number: " << processNumber << "\t Cpu: " << shortJob<<endl;
-		cout << "Actual Time: " << actualTime << endl;
-		cout << "====================\n";
-		
-		p[processNumber].readyQueuePop();
-
-		
-
-	}
+	
 
 
 }
@@ -203,7 +243,7 @@ int main()
 
   //p1.moveToReadyQueue();
 
-  SJFsched sjf(p,8);
+  SJFsched sjf(p,9);
   sjf.cpu();
   
 
