@@ -19,7 +19,10 @@ public:
 	int getArrivaltime();
 	void setArrivalTime(int y);
 	void readyQueuePop();
-
+	int getTotalProcess();
+	int reponseTime;
+	int TurnaroundTime;
+	int workTime;
 
 
 private:
@@ -28,6 +31,8 @@ private:
 	queue<int> readyQueue;
 	int arrivalTime;
 	bool isCPUburst;
+	int totalProcess;
+	
 
 
 };
@@ -36,6 +41,7 @@ Process::Process()
 {
 	arrivalTime = 0;
 	isCPUburst = true;
+	reponseTime = 0;
 
 }
 Process::Process(int x[], int len)
@@ -44,21 +50,22 @@ Process::Process(int x[], int len)
 	isCPUburst = true;
 	//int len = int(sizeof(x)) / sizeof(x[0]);
 	//cout << len << endl;
-	cout << "Process started" << endl ;
+	//cout << "Process started" << endl ;
 	for (size_t i = 0; i < len; i++)
 	{
 		if (i%2==0)
 		{
 			cpuBurst.push(x[i]);
-			cout << "CPU: " << x[i]<<"\t";
+			//cout << "CPU: " << x[i]<<"\t";
+			totalProcess++;
 		}
 		else
 		{
 			IO.push(x[i]);
-			cout << "I/O: " << x[i] << "\t";
+			//cout << "I/O: " << x[i] << "\t";
 		}
 	}
-	cout <<"Process readed"<< endl<<endl;
+	//cout <<"Process readed"<< endl<<endl;
 	moveToReadyQueue();
 
 }
@@ -81,12 +88,15 @@ int Process::getReadyQueueP()
 
 void Process::moveToReadyQueue()
 {
-	while (readyQueue.empty())
+	// || !cpuBurst.empty() && !IO.empty()
+	int count = 0;
+	while (readyQueue.empty() && count<2 )
 	{
-		cout << "happen  ->";
-		if (isCPUburst)
+		//cout << "happen  ->";
+		if (isCPUburst && !cpuBurst.empty())
 		{
 			readyQueue.push(cpuBurst.front());
+			workTime = workTime + cpuBurst.front();
 			cpuBurst.pop();
 			isCPUburst = false;
 			
@@ -96,6 +106,7 @@ void Process::moveToReadyQueue()
 			if (!IO.empty())
 			{
 				arrivalTime = arrivalTime + IO.front();
+				workTime = workTime + IO.front();
 				IO.pop();
 				isCPUburst = true;
 			}
@@ -104,9 +115,9 @@ void Process::moveToReadyQueue()
 		
 		if (!readyQueue.empty())
 		{
-			cout << readyQueue.front() << "\n";
+			//cout << readyQueue.front() << "\n";
 		}
-		
+		count++;
 	}
 }
 
@@ -125,6 +136,11 @@ void Process::readyQueuePop()
 	readyQueue.pop();
 }
 
+int Process::getTotalProcess()
+{
+	return totalProcess;
+}
+
 class SJFsched
 {
 public:
@@ -132,6 +148,7 @@ public:
 	SJFsched(Process [], int s);
 	~SJFsched();
 	void cpu();
+	int cpuTotalWork;
 
 private:
 	Process *p;
@@ -162,44 +179,143 @@ void SJFsched::cpu()
 {
 	int shortJob = 999999999;
 	int processNumber = -1;
-	//select short Job in  the ready queue of process
-	for (size_t i = 0; i < 5; i++)
+	int totalProcess = 0;
+
+	cout << "this is Start time " << actualTime << endl;
+	///
+	//get totatl process from all process array
+	for (size_t i = 0; i < size; i++)
 	{
+		totalProcess += p[i].getTotalProcess()+1;
+	}
+	cout << "total process " << totalProcess << endl;
+
+	
+	for (size_t j = 0; j <= totalProcess; j++)
+	{
+		cout << "*****This is actual time " << actualTime << endl;
+		cout << "LIST OF THE PROCESS ON THE READY QUEUE\n";
+		cout << "Proccess\t"<< "Burst\t"<< "ArrivalTime\n";
+		
+
 
 		////////////////////////
-
+		//select short Job in  the ready queue of process
 		for (size_t i = 0; i < size; i++)
 		{
-			if (p[i].getReadyQueueP() != 0)
+			if (p[i].getReadyQueueP() != 0 && p[i].getArrivaltime()<=actualTime)
 			{
 				int currentproccessJob = p[i].getReadyQueueP();
-				if (shortJob > currentproccessJob && actualTime >= p[i].getArrivaltime())
+				if (actualTime >= p[i].getArrivaltime())
 				{
-					shortJob = currentproccessJob;
-					processNumber = i;
+					if (shortJob > currentproccessJob)
+					{
+
+						shortJob = currentproccessJob;
+						processNumber = i;
+					}
+					if (shortJob == currentproccessJob)
+					{
+						if (p[processNumber].getArrivaltime() > p[i].getArrivaltime())
+						{
+							processNumber = i;
+						}
+
+					}
+
+				}
+				cout << "Process P" << i + 1 << "\t" << currentproccessJob << " \t" << p[i].getArrivaltime() << endl;
+				
+			}
+			else
+			{
+				if (p[i].getReadyQueueP()!=0)
+				{
+					cout << "Process P" << i + 1 << "\t" << p[i].getReadyQueueP() << "\t" <<"(" << p[i].getArrivaltime() << ") - I/O Queue\n" << endl;
+				}
+
+				
+			}
+			if (p[i].getReadyQueueP()==0)
+			{
+				p[1].TurnaroundTime = 896;
+				if (p[i].TurnaroundTime == 0)
+				{
+					p[i].TurnaroundTime = actualTime;
 				}
 			}
+			
+		}
+
+		
+		
+		
+		if (shortJob== 999999999)
+		{
+			int firstArrivaalProcess = 99999;
+			for (size_t i = 0; i < size; i++)
+			{
+				if (p[i].getReadyQueueP()!=0)
+				{
+					if (firstArrivaalProcess > p[i].getArrivaltime()) {
+						firstArrivaalProcess = p[i].getArrivaltime();
+						cout << "New Arrival Time is " << actualTime << endl;
+					}
+				}
+			}
+			actualTime = firstArrivaalProcess;
 
 		}
 
-		if (processNumber != -1)
+
+
+		if (processNumber != -1 && p[processNumber].getReadyQueueP() != 0 && shortJob!= 999999999)
 		{
-			p[processNumber].setArrivalTime(p[processNumber].getArrivaltime() + p[processNumber].getReadyQueueP());
-			actualTime = actualTime  +p[processNumber].getArrivaltime();
-			cout << "====================\n";
+			if (p[processNumber].reponseTime == 0 && processNumber!=7)
+			{
+				p[processNumber].reponseTime = actualTime;
+			}
+
+			cout << "Next Process on the CPU: " << "P" << processNumber + 1 << " -> " << shortJob << " burst" << endl;
+			//p[processNumber].setArrivalTime(p[processNumber].getArrivaltime() + p[processNumber].getReadyQueueP());
+
+			//actualTime = actualTime  +p[processNumber].getArrivaltime();
+			
+			cpuTotalWork = cpuTotalWork+ p[processNumber].getReadyQueueP();
+			actualTime = actualTime + p[processNumber].getReadyQueueP();
+			p[processNumber].setArrivalTime(actualTime);
+			cout << "===========================================\n";
 			cout << "Process Number: " << processNumber + 1 <<endl<< "\t Cpu: " << shortJob << endl;
-			cout << "Actual Time: " << actualTime << endl;
-			cout << "====================\n";
+			cout << "Actual Time after process p" << processNumber+1 <<" = "<< actualTime << endl;
+			cout << "===========================================\n";
 			
 			//cout << "now arrival time will be " << p[processNumber].getArrivaltime() << endl;
 			p[processNumber].readyQueuePop();
+			//p[processNumber].setArrivalTime(actualTime+)
 
 			p[processNumber].moveToReadyQueue();
 
 			shortJob = 999999999;
 
 		}
+		else {
 
+			//actualTime=+10;
+			//int firstArrivaalProcess = 99999999999999;
+
+			//for (size_t i = 0; i < size; i++)
+			//{
+			//	if (p[i].getReadyQueueP()!=0)
+			//	{
+			//		if (firstArrivaalProcess > p[i].getArrivaltime()) {
+			//			firstArrivaalProcess = p[i].getArrivaltime();
+			//		}
+			//	}
+			//}
+		}
+		//shortJob = 999999999;
+
+		
 
 
 
@@ -208,8 +324,26 @@ void SJFsched::cpu()
 
 	}
 
-	
 
+
+	
+	cout << "\nSJF Simulation Results\n";
+	cout << "Process    " << "Reponse Time   " << "Wait time\t" << "TunrAround Time" << endl;
+	int totaRT=0,totalTT=0, totalwt=0;
+	for (size_t i = 0; i < size; i++)
+	{
+		totaRT += p[i].reponseTime;
+		int temp = p[i].TurnaroundTime - p[i].workTime;
+		totalwt += temp;
+		totalTT += p[i].TurnaroundTime;
+		cout << "P" << i+1 << "\t\t" << p[i].reponseTime <<"\t\t"<< temp <<"\t\t" << p[i].TurnaroundTime << endl;
+
+	}
+	cout << "------------------------------------------------------------------\n";
+	cout << "Average" << "\t\t" << totaRT/9 << "\t\t" << totalwt/9 << "\t\t" << totalTT/9 << endl;
+	
+	cout << "Total  CPU  work " << cpuTotalWork << endl;
+	cout << "Total  CPU % work " << cpuTotalWork/double(actualTime)*100  << endl;
 
 }
 
@@ -229,15 +363,36 @@ int main()
   int p9data[] = { 13, 37, 8, 41, 7, 27, 12, 29, 5, 27, 6, 18, 3, 33, 4, 62, 6 };
 
 
+  /*int p1data[] = { 7, 22, 6, 19};
+  int p2data[] = { 14, 48, 15, 44 };
+  int p3data[] = { 8, 43, 7, 41};
+  int p4data[] = { 13, 37, 4, 41 };
+  int p5data[] = { 6, 34, 7, 21};
+  int p6data[] = { 9, 32, 4, 28 };
+  int p7data[] = { 14, 46, 17, 41 };
+  int p8data[] = { 4, 64, 5, 53};
+  int p9data[] = { 13, 37, 8, 41 };*/
+
+
   Process p1(p1data, 17);
   Process p2(p2data, 17);
   Process p3(p3data, 17);
   Process p4(p4data, 17);
-  Process p5(p5data, 17);
+  Process p5(p5data, 19);
   Process p6(p6data, 17);
   Process p7(p7data, 15);
   Process p8(p8data, 19);
   Process p9(p9data, 17);
+
+ /* Process p1(p1data, 4);
+  Process p2(p2data, 4);
+  Process p3(p3data, 4);
+  Process p4(p4data, 4);
+  Process p5(p5data, 4);
+  Process p6(p6data, 4);
+  Process p7(p7data, 4);
+  Process p8(p8data, 4);
+  Process p9(p9data, 4);*/
 
   Process p[] = { p1,p2,p3,p4,p5,p6,p7,p8,p9 };
 
